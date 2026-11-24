@@ -41,6 +41,7 @@ Without a key, the app uses a clearly labelled local report template. Never comm
    OPENAI_MODEL = "gpt-4.1-mini"
    ```
 5. Deploy. Test the public app using synthetic sample feedback first.
+6. ##PROJECT DEMO LINK WATCH MY PROJECT DEMO https://drive.google.com/file/d/1m9W-S7ZpRVwGX1RtHD_YuyDRca2L1GDY/view?usp=drive_link
 
 ### Important deployment note
 Streamlit Community Cloud local filesystems are not guaranteed to be durable across app restarts/redeployments. This prototype uses SQLite for demonstration. For production use, move the database to a managed persistent database and add authentication/role-based access before collecting real learner feedback.
