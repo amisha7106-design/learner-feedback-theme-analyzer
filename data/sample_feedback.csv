@@ -1,0 +1,13 @@
+feedback_text,course_name,trainer_name,learner_id,submitted_at
+"The biology lessons are clear and the trainer explains difficult topics with useful examples.",Biology,Trainer A,STU001,2026-11-17
+"The Python practice sessions are helpful but I need more time for exercises.",Python,Trainer B,STU002,2026-11-17
+"Classes start late and the schedule changes without enough notice.",Python,Trainer B,STU003,2026-11-18
+"I love the interactive activities. They make learning interesting.",Biology,Trainer A,STU004,2026-11-18
+"The database topic was confusing. Please provide more step by step examples.",Python,Trainer C,STU005,2026-11-18
+"Trainer is supportive and answers every question clearly.",Data Analytics,Trainer D,STU006,2026-11-19
+"The course material is good but some videos are slow to load.",Data Analytics,Trainer D,STU007,2026-11-19
+"मुझे क्लास अच्छी लगी और टीचर ने अच्छे से समझाया।",Biology,Trainer A,STU008,2026-11-19
+"Assignments are difficult and instructions are not clear.",Python,Trainer B,STU009,2026-11-20
+"Excellent course. The real life examples helped me understand the concepts.",Data Analytics,Trainer D,STU010,2026-11-20
+"Please share notes after class. It is difficult to revise without notes.",Biology,Trainer A,STU011,2026-11-20
+"The trainer explains well but we need more practical projects.",Python,Trainer C,STU012,2026-11-20

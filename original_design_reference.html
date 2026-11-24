@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Learner Feedback Theme Analyser</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg1:#0a0f2e;--bg2:#2b1166;--card:rgba(255,255,255,.07);--bd:rgba(255,255,255,.15);--tx:#eef0ff;--mut:#a9b0d8;--ac:#8b5cf6;--ac2:#38bdf8;--pos:#34d399;--neu:#fbbf24;--neg:#fb7185}
+:root[data-theme=light]{--bg1:#e6ebff;--bg2:#f0e4ff;--card:rgba(255,255,255,.75);--bd:rgba(80,70,160,.2);--tx:#1b1840;--mut:#5b5f8a}
+*{box-sizing:border-box}
+html,body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{font-family:Poppins,system-ui,sans-serif;color:var(--tx);background:linear-gradient(135deg,var(--bg1),var(--bg2)) fixed;min-height:100vh}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:22px;padding:20px;backdrop-filter:blur(14px);box-shadow:0 10px 40px rgba(0,0,0,.2)}
+.btn{background:linear-gradient(90deg,var(--ac),var(--ac2));color:#fff;border:0;border-radius:14px;padding:10px 18px;font:600 14px Poppins;cursor:pointer;transition:transform .15s}
+.btn:hover{transform:translateY(-2px)}.btn.g{background:var(--card);border:1px solid var(--bd);color:var(--tx)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--ac2);outline-offset:2px}
+input,select,textarea{background:var(--card);border:1px solid var(--bd);color:var(--tx);border-radius:12px;padding:10px 12px;font:400 14px Poppins;width:100%}
+select option{color:#111}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+nav button{background:none;border:0;color:var(--mut);font:500 14px Poppins;padding:8px 12px;border-radius:10px;cursor:pointer}
+nav button.on{background:var(--card);color:var(--tx)}
+.grid{display:grid;gap:16px}.g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.big{font-size:34px;font-weight:700}.mut{color:var(--mut);font-size:13px}
+.bar{height:8px;border-radius:8px;background:var(--bd);overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width .8s}
+.tag{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:600}
+.Positive{background:rgba(52,211,153,.2);color:var(--pos)}.Neutral{background:rgba(251,191,36,.2);color:var(--neu)}.Negative{background:rgba(251,113,133,.2);color:var(--neg)}
+.view{display:none}.view.on{display:block}
+#cloud span{display:inline-block;margin:4px 8px;font-weight:600;line-height:1.1}
+#side{position:fixed;top:0;right:-340px;width:320px;height:100%;z-index:30;transition:right .3s;overflow:auto;background:var(--bg1);border-left:1px solid var(--bd);padding:20px}
+#side.open{right:0}
+.hero h1{font-size:clamp(34px,6vw,64px);font-weight:800;line-height:1.05;margin:0}
+.grad{background:linear-gradient(90deg,#a78bfa,#38bdf8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.blob{position:absolute;width:340px;height:340px;border-radius:50%;filter:blur(80px);opacity:.35;background:var(--ac);animation:fl 9s ease-in-out infinite alternate;z-index:-1}
+@keyframes fl{to{transform:translate(60px,40px) scale(1.2)}}
+.cur::after{content:"|";animation:bl 1s steps(1) infinite}@keyframes bl{50%{opacity:0}}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ac);color:#fff;padding:10px 18px;border-radius:12px;display:none;z-index:50}
+#cf{position:fixed;inset:0;pointer-events:none;z-index:40}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media print{header,#side,.noprint,#cf{display:none!important}body{background:#fff;color:#000}.card{box-shadow:none;border-color:#ccc}}
+</style>
+</head>
+<body>
+<canvas id="cf"></canvas><div id="toast"></div>
+<aside id="side"><div class="flex justify-between items-center mb-4"><b>🕘 History</b><button class="btn g" onclick="$('#side').classList.remove('open')">Close</button></div><div id="hist"></div></aside>
+
+<header class="noprint" style="padding:14px 20px;display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+ <div style="display:flex;gap:12px;align-items:center"><div style="font-size:30px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:14px;padding:6px 10px">🎓</div>
+ <div><div style="font-weight:700;font-size:18px">Learner Feedback Theme Analyser</div><div class="mut">Understand Every Learner, Improve Every Lesson</div></div></div>
+ <nav>
+  <button data-v="home" class="on">Home</button><button data-v="teacher">Teacher dashboard</button><button data-v="student">Student form</button><button data-v="about">How it works</button>
+  <button onclick="renderHist();$('#side').classList.add('open')">History</button><button id="tg" aria-label="Toggle light or dark mode">🌙</button>
+ </nav>
+</header>
+
+<main style="max-width:1150px;margin:0 auto;padding:10px 18px 60px">
+
+<section id="home" class="view on">
+ <div class="hero" style="position:relative;padding:50px 0 30px;text-align:center"><div class="blob" style="left:8%;top:0"></div><div class="blob" style="right:8%;top:60px;background:var(--ac2)"></div>
+  <h1>Hear what your class<br>is <span class="grad cur" id="ty"></span></h1>
+  <p class="mut" style="font-size:17px;max-width:560px;margin:18px auto">Paste or upload learner feedback and get themes, sentiment and a clear plan for your next lesson, all in your browser.</p>
+  <button class="btn" style="font-size:16px;padding:14px 28px" onclick="loadDemo();go('teacher')">Try Live Demo</button>
+ </div>
+ <div class="grid g3" style="margin-top:20px">
+  <div class="card"><div style="font-size:34px">🧠</div><h3>Finds the themes</h3><p class="mut">Eight themes, from Teaching Quality to Exam Pressure, detected in every comment.</p></div>
+  <div class="card"><div style="font-size:34px">📊</div><h3>Measures the mood</h3><p class="mut">Positive, neutral and negative shares, a happy score and a trend over time.</p></div>
+  <div class="card"><div style="font-size:34px">🛠️</div><h3>Suggests what to fix</h3><p class="mut">A five-point improvement plan built from the issues students raise most.</p></div>
+ </div>
+ <div class="card" style="margin-top:20px"><b>💬 Feedback of the Day</b><p id="fod" style="font-size:18px;margin:8px 0 0"></p></div>
+</section>
+
+<section id="teacher" class="view">
+ <div class="card noprint">
+  <b>Add feedback</b> <span class="mut">one comment per line</span>
+  <textarea id="inp" rows="5" placeholder="Teacher is good but class is boring, syllabus is tough" style="margin:10px 0"></textarea>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+   <button class="btn" onclick="runInput()">Analyse</button>
+   <button class="btn g" onclick="loadDemo()">Load demo feedbacks</button>
+   <label class="btn g">Upload .txt / .csv / .xlsx<input type="file" id="fl" accept=".txt,.csv,.xlsx,.xls" hidden></label>
+   <button class="btn g" onclick="voice()">🎤 Voice to text</button>
+  </div>
+ </div>
+
+ <div id="out" style="margin-top:18px">
+  <div class="grid g3">
+   <div class="card"><div class="mut">Total feedbacks</div><div class="big" id="kT">0</div></div>
+   <div class="card"><div class="mut">Happy score</div><div class="big" id="kH">0%</div><div class="bar"><i id="kHb"></i></div></div>
+   <div class="card"><div class="mut">Top 3 issues</div><div id="kI"></div></div>
+   <div class="card"><div class="mut">Top 3 appreciations</div><div id="kA"></div></div>
+  </div>
+
+  <div class="grid g3" style="margin-top:16px">
+   <div class="card"><b>Sentiment</b><canvas id="c1" height="220"></canvas></div>
+   <div class="card"><b>Themes</b><canvas id="c2" height="220"></canvas></div>
+   <div class="card"><b>Feedback trend</b><canvas id="c3" height="220"></canvas></div>
+  </div>
+
+  <div class="card" style="margin-top:16px"><b>☁️ Word cloud</b><div id="cloud" style="text-align:center;margin-top:10px"></div></div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:22px 0 10px;flex-wrap:wrap;gap:8px"><h2 style="margin:0">Theme-wise summary</h2><button class="btn noprint" onclick="plan()">✨ Get improvement plan</button></div>
+  <div class="card" id="plan" style="display:none;margin-bottom:16px"></div>
+  <div class="grid g2" id="themes"></div>
+
+  <h2 style="margin:26px 0 10px">All feedback</h2>
+  <div class="card noprint grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+   <select id="fT"><option value="">All themes</option></select>
+   <select id="fS"><option value="">All sentiments</option><option>Positive</option><option>Neutral</option><option>Negative</option></select>
+   <input id="fK" placeholder="Keyword">
+   <input id="fD" type="date" aria-label="From date">
+  </div>
+  <div id="list" class="grid" style="margin-top:12px"></div>
+
+  <div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:22px">
+   <button class="btn" onclick="window.print()">📄 Download PDF report</button>
+   <button class="btn g" onclick="toXlsx()">📗 Download Excel</button>
+   <button class="btn g" onclick="copySum()">📋 Copy summary</button>
+   <button class="btn g" onclick="window.print()">🖨️ Print</button>
+  </div>
+ </div>
+</section>
+
+<section id="student" class="view">
+ <div class="card" style="max-width:640px;margin:20px auto">
+  <h2 style="margin-top:0">Share your feedback</h2>
+  <p class="mut">Be honest and specific. Your comment is added to the class analysis.</p>
+  <label class="mut">Course</label><select id="sC" style="margin-bottom:10px"><option>Python Programming</option><option>Data Science</option><option>Web Development</option><option>Other</option></select>
+  <label class="mut">Overall rating</label><select id="sR" style="margin-bottom:10px"><option>5 ⭐⭐⭐⭐⭐</option><option>4 ⭐⭐⭐⭐</option><option>3 ⭐⭐⭐</option><option>2 ⭐⭐</option><option>1 ⭐</option></select>
+  <label class="mut">Your comment</label><textarea id="sT" rows="5" placeholder="What worked, and what should change?"></textarea>
+  <button class="btn" style="margin-top:12px" onclick="submitStudent()">Submit feedback</button>
+ </div>
+</section>
+
+<section id="about" class="view">
+ <h2>How it works</h2>
+ <div class="grid g3">
+  <div class="card"><b>1. Import</b><p class="mut">Type, paste, speak or upload a .txt, .csv or Excel file.</p></div>
+  <div class="card"><b>2. Analyse</b><p class="mut">Keyword rules tag each comment with themes and a sentiment, handling words like “not good”.</p></div>
+  <div class="card"><b>3. Report</b><p class="mut">Charts, a word cloud, theme summaries and an improvement plan appear instantly.</p></div>
+ </div>
+ <h2 style="margin-top:28px">About the project</h2>
+ <div class="grid g2">
+  <div class="card"><b>Problem</b><p class="mut">Feedback arrives as many free-text comments. Reading them one by one is slow, and recurring issues get missed.</p></div>
+  <div class="card"><b>Solution</b><p class="mut">A browser app that groups comments into themes, measures sentiment and turns the result into actions.</p></div>
+  <div class="card"><b>Features</b><p class="mut">Eight themes, sentiment charts, word cloud, filters, history, Excel and PDF export, voice input, teacher and student views.</p></div>
+  <div class="card"><b>Future scope</b><p class="mut">Python backend with SQLite, TF-IDF clustering, multilingual detection, and report writing with an LLM API such as Claude.</p></div>
+  <div class="card"><b>Technology used</b><p class="mut">HTML, CSS, JavaScript, Tailwind CSS, Chart.js, SheetJS, Web Speech API, localStorage.</p></div>
+ </div>
+</section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TH={
+'Teaching Quality':{e:'📚',k:['teacher','teach','explain','lecture','sir ','madam','faculty','professor','instructor'],tip:'Keep the clear explanations, and add a short recap at the end of each session.'},
+'Content Difficulty':{e:'😩',k:['syllabus','difficult','tough','hard','complex','topics','content','theory'],tip:'Break hard topics into smaller steps with worked examples and a pace check.'},
+'Class Environment':{e:'🏫',k:['class is','classes','boring','interactive','discussion','atmosphere','engaging','sessions','fun'],tip:'Add polls, group tasks or live demos every 15 minutes to lift engagement.'},
+'Assignments':{e:'📝',k:['assignment','homework','project','workload','submission'],tip:'Spread deadlines out and publish clear marking criteria for each assignment.'},
+'Communication':{e:'💬',k:['communicat','doubt','respond','repl','email','listen','friendly','approach'],tip:'Set a response-time promise and hold weekly doubt-clearing hours.'},
+'Facilities':{e:'🖥️',k:['wifi','lab','projector','library','classroom','ac ','facilit','internet','crowded','seat'],tip:'Report equipment faults weekly and check lab and projector setup before class.'},
+'Exam Pressure':{e:'😰',k:['exam','test','marks','grade','pressure','stress','deadline'],tip:'Offer practice tests and a clear revision plan to ease exam stress.'},
+'Suggestions':{e:'💡',k:['please','should','suggest','wish','could','add more','need more','more '],tip:'Review student suggestions together each month and tell them what you will adopt.'}};
+const POS='good great excellent amazing helpful clear love loved enjoy enjoyed best nice friendly supportive engaging fun awesome interesting patient useful quiet quickly'.split(' ');
+const NEG='boring tough difficult hard bad poor slow worst confusing stress stressful pressure late rude weak heavy dull broken crowded unclear huge'.split(' ');
+const STOP=new Set('this that with have from they them their there very much more also been were what when your about because into than then just only some many even'.split(' '));
+const COL=['#a78bfa','#38bdf8','#34d399','#fbbf24','#fb7185','#f472b6','#60a5fa'];
+const DEMO=['The teacher explains concepts very clearly and is always helpful.','Class is boring, too much theory and no interaction.','Syllabus is too tough and the topics are hard to follow.','Assignments are too many and the deadlines are stressful.','Wifi in the lab is slow and the projector is broken.','Sir responds to doubts quickly, very friendly and supportive.','Exam pressure is huge, please give more practice tests.','Great discussions in class, I really enjoy the interactive sessions.','Teacher is good but class is boring, syllabus is tough.','The library is quiet and the facilities are excellent.','Please add more real world examples and projects.','Communication is poor, nobody replies to emails.','Lectures are engaging and the faculty is amazing.','Homework workload is heavy but the assignments are useful.','Classroom is crowded and the AC does not work.'];
+const OFF=[13,12,11,10,9,8,7,6,5,4,3,2,2,1,0];
+let items=[],charts={};
+
+const dayStr=o=>new Date(Date.now()-o*864e5).toISOString().slice(0,10);
+function classify(t,d){
+ const low=' '+t.toLowerCase()+' ',w=low.match(/[a-z']+/g)||[];let sc=0;
+ w.forEach((x,i)=>{const neg=/^(not|no|never|dont|don't|isn't|doesn't)$/.test(w[i-1]||'')||/^(not|no|never)$/.test(w[i-2]||'');
+  if(POS.includes(x))sc+=neg?-1:1;else if(NEG.includes(x))sc+=neg?1:-1;});
+ const th=Object.keys(TH).filter(n=>TH[n].k.some(k=>low.includes(k)));
+ return{t,d:d||dayStr(0),s:sc>0?'Positive':sc<0?'Negative':'Neutral',th};
+}
+function loadDemo(){items=DEMO.map((t,i)=>classify(t,dayStr(OFF[i])));$('#inp').value=DEMO.join('\n');finish('Demo analysis')}
+function runInput(){
+ const L=$('#inp').value.split('\n').map(x=>x.trim()).filter(x=>x.length>2);
+ if(!L.length)return toast('Add at least one feedback line first');
+ items=L.map(t=>classify(t));finish('Analysis of '+L.length+' feedbacks');
+}
+function finish(name){render();save(name);toast('Analysis ready: '+items.length+' feedbacks')}
+function pct(a,b){return b?Math.round(a/b*100):0}
+function stats(){
+ const n=items.length,c={Positive:0,Neutral:0,Negative:0},T={};
+ Object.keys(TH).forEach(k=>T[k]={n:0,p:0,g:0});
+ items.forEach(x=>{c[x.s]++;x.th.forEach(k=>{T[k].n++;if(x.s=='Positive')T[k].p++;if(x.s=='Negative')T[k].g++})});
+ return{n,c,T,happy:pct(c.Positive+c.Neutral*.5,n)};
+}
+function mk(id,cfg){charts[id]&&charts[id].destroy();Chart.defaults.color=getComputedStyle(document.documentElement).getPropertyValue('--mut');charts[id]=new Chart($('#'+id),cfg)}
+function render(){
+ const S=stats(),names=Object.keys(TH);
+ $('#kT').textContent=S.n;$('#kH').textContent=S.happy+'%';$('#kHb').style.width=S.happy+'%';
+ const top=(f)=>names.filter(k=>S.T[k][f]>0).sort((a,b)=>S.T[b][f]-S.T[a][f]).slice(0,3).map(k=>`<div style="margin-top:6px">${TH[k].e} ${k} <span class="mut">(${S.T[k][f]})</span></div>`).join('')||'<div class="mut">None yet</div>';
+ $('#kI').innerHTML=top('g');$('#kA').innerHTML=top('p');
+ mk('c1',{type:'pie',data:{labels:['Positive','Neutral','Negative'],datasets:[{data:[S.c.Positive,S.c.Neutral,S.c.Negative],backgroundColor:['#34d399','#fbbf24','#fb7185'],borderWidth:0}]}});
+ mk('c2',{type:'bar',data:{labels:names.map(k=>TH[k].e+' '+k.split(' ')[0]),datasets:[{label:'Feedbacks',data:names.map(k=>S.T[k].n),backgroundColor:COL,borderRadius:8}]},options:{plugins:{legend:{display:false}}}});
+ const days={};items.forEach(x=>{days[x.d]=days[x.d]||{a:0,p:0};days[x.d].a++;if(x.s=='Positive')days[x.d].p++});
+ const dk=Object.keys(days).sort();
+ mk('c3',{type:'line',data:{labels:dk,datasets:[{label:'All',data:dk.map(k=>days[k].a),borderColor:'#a78bfa',tension:.4},{label:'Positive',data:dk.map(k=>days[k].p),borderColor:'#34d399',tension:.4}]}});
+ const f={};items.forEach(x=>(x.t.toLowerCase().match(/[a-z]{4,}/g)||[]).forEach(w=>{if(!STOP.has(w))f[w]=(f[w]||0)+1}));
+ const ws=Object.entries(f).sort((a,b)=>b[1]-a[1]).slice(0,40),mx=ws[0]?ws[0][1]:1;
+ $('#cloud').innerHTML=ws.map(([w,c],i)=>`<span style="font-size:${14+c/mx*28}px;color:${COL[i%COL.length]}">${esc(w)}</span>`).join('');
+ $('#themes').innerHTML=names.filter(k=>S.T[k].n).map(k=>{const t=S.T[k],ex=items.filter(x=>x.th.includes(k)).slice(0,2);
+  return`<div class="card"><div style="display:flex;justify-content:space-between"><b>${TH[k].e} ${k}</b><span class="mut">${t.n} feedbacks · ${pct(t.p,t.n)}% positive</span></div>
+  <div class="bar" style="margin:10px 0"><i style="width:${pct(t.n,S.n)}%"></i></div>
+  ${ex.map(x=>`<p class="mut" style="margin:6px 0">“${esc(x.t)}”</p>`).join('')}
+  <p style="margin:8px 0 0;font-size:14px">💡 ${TH[k].tip}</p></div>`}).join('');
+ $('#fT').innerHTML='<option value="">All themes</option>'+names.map(k=>`<option>${k}</option>`).join('');
+ $('#plan').style.display='none';list();
+ if(S.n&&S.happy>=65)confetti();
+}
+function list(){
+ const t=$('#fT').value,s=$('#fS').value,k=$('#fK').value.toLowerCase(),d=$('#fD').value;
+ const r=items.filter(x=>(!t||x.th.includes(t))&&(!s||x.s==s)&&(!k||x.t.toLowerCase().includes(k))&&(!d||x.d>=d));
+ $('#list').innerHTML=r.map(x=>`<div class="card" style="padding:14px"><span class="tag ${x.s}">${x.s}</span> <span class="mut">${x.d} · ${x.th.map(n=>TH[n].e+' '+n).join(', ')||'No theme'}</span><p style="margin:6px 0 0">${esc(x.t)}</p></div>`).join('')||'<div class="mut">No feedback matches these filters.</div>';
+}
+['fT','fS','fK','fD'].forEach(i=>$('#'+i).addEventListener('input',list));
+function plan(){
+ const S=stats(),bad=Object.keys(TH).filter(k=>S.T[k].g).sort((a,b)=>S.T[b].g-S.T[a].g).slice(0,3).map(k=>TH[k].e+' '+k+': '+TH[k].tip);
+ const gen=['Share a short “you said, we did” note with students next week.','Re-run this analysis in a month to compare the happy score.','Ask one student group to review the changes and report back.'];
+ $('#plan').innerHTML='<b>Improvement plan for the teacher</b><ol style="margin:8px 0 0;padding-left:20px">'+bad.concat(gen).slice(0,5).map(x=>`<li style="margin:6px 0">${x}</li>`).join('')+'</ol>';
+ $('#plan').style.display='block';
+}
+function summary(){
+ const S=stats(),i=Object.keys(TH).filter(k=>S.T[k].g).sort((a,b)=>S.T[b].g-S.T[a].g).slice(0,3).join(', ')||'none';
+ return`Learner Feedback Summary\nTotal feedbacks: ${S.n}\nHappy score: ${S.happy}%\nPositive ${S.c.Positive}, Neutral ${S.c.Neutral}, Negative ${S.c.Negative}\nTop issues: ${i}`;
+}
+function copySum(){navigator.clipboard.writeText(summary()).then(()=>toast('Summary copied'),()=>toast('Copy failed. Select the text manually.'))}
+async function toXlsx(){try{const ws=XLSX.utils.json_to_sheet(items.map(x=>({Date:x.d,Feedback:x.t,Sentiment:x.s,Themes:x.th.join(', ')})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Feedback');
+ const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'}),dl=window.claude&&await claude.use('downloads');
+ if(!dl)return toast('Downloads are not available in this view');await dl.save({filename:'feedback-report.xlsx',data:buf});toast('Excel saved')}catch(e){if(!e||e.code!='declined')toast('Could not save the Excel file')}}
+function save(name){try{const h=JSON.parse(localStorage.getItem('lfta')||'[]');h.unshift({name,at:new Date().toLocaleString(),items,happy:stats().happy});localStorage.setItem('lfta',JSON.stringify(h.slice(0,15)))}catch(e){}}
+function renderHist(){let h=[];try{h=JSON.parse(localStorage.getItem('lfta')||'[]')}catch(e){}
+ $('#hist').innerHTML=h.map((x,i)=>`<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="openHist(${i})"><b>${esc(x.name)}</b><div class="mut">${x.at} · happy ${x.happy}%</div></div>`).join('')||'<p class="mut">No saved analyses yet. Run one and it appears here.</p>'}
+function openHist(i){try{items=JSON.parse(localStorage.getItem('lfta'))[i].items;render();go('teacher');$('#side').classList.remove('open')}catch(e){}}
+function submitStudent(){const t=$('#sT').value.trim();if(t.length<3)return toast('Write a comment before submitting');
+ items.push(classify(t+' ('+$('#sC').value+', '+$('#sR').value.split(' ')[0]+'/5)'));$('#sT').value='';render();save('Student submission');toast('Thank you, your feedback was added')}
+document.getElementById('fl').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+ if(/\.txt$/i.test(f.name)){rd.onload=()=>{$('#inp').value=rd.result;toast('File loaded. Press Analyse.')};rd.readAsText(f);return}
+ rd.onload=()=>{try{const wb=XLSX.read(rd.result,{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+  const L=rows.map(r=>(r||[]).filter(c=>typeof c=='string').sort((a,b)=>b.length-a.length)[0]).filter(x=>x&&!/^(feedback|comments?|date|name)$/i.test(x.trim()));
+  $('#inp').value=L.join('\n');toast(L.length+' rows loaded. Press Analyse.')}catch(err){toast('Could not read that file')}};rd.readAsArrayBuffer(f)});
+let DICT=null;
+if(window.claude)claude.use('dictation').then(d=>{DICT=d;if(d)d.onFinal(e=>{const a=$('#inp');a.value+=(a.value?'\n':'')+e.text.trim()})}).catch(()=>{});
+function voice(){
+ if(!DICT)return toast('Voice input is not available in this view');
+ DICT.start().then(()=>toast('Listening…'),e=>{if(e&&e.code=='not_granted')toast('Microphone access was declined')})}
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2600)}
+function go(v){$$('.view').forEach(s=>s.classList.toggle('on',s.id==v));$$('nav [data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v==v));scrollTo(0,0)}
+$$('nav [data-v]').forEach(b=>b.onclick=()=>go(b.dataset.v));
+$('#tg').onclick=()=>{const d=document.documentElement,l=d.dataset.theme!='light';d.dataset.theme=l?'light':'dark';$('#tg').textContent=l?'☀️':'🌙';render()};
+function confetti(){if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;const c=$('#cf'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;
+ const P=Array.from({length:140},()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height/2,v:2+Math.random()*4,s:5+Math.random()*6,c:COL[Math.random()*7|0],r:Math.random()*6}));let f=0;
+ (function a(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.y+=p.v;p.x+=Math.sin(p.y/30);p.r+=.1;x.fillStyle=p.c;x.fillRect(p.x,p.y,p.s,p.s*.6)});if(++f<170)requestAnimationFrame(a);else x.clearRect(0,0,c.width,c.height)})()}
+(function typer(){const W=['happy and heard.','confused and stuck.','excited to learn.','asking for change.'];let i=0,j=0,del=false;const el=$('#ty');
+ (function t(){const w=W[i];j+=del?-1:1;el.textContent=w.slice(0,j);let d=del?35:70;if(!del&&j==w.length){del=true;d=1400}else if(del&&j==0){del=false;i=(i+1)%W.length;d=300}setTimeout(t,d)})()})();
+$('#fod').textContent='“'+DEMO[new Date().getDate()%DEMO.length]+'”';
+items=DEMO.map((t,i)=>classify(t,dayStr(OFF[i])));$('#inp').value=DEMO.join('\n');render();
+</script>
+</body>
+</html>
